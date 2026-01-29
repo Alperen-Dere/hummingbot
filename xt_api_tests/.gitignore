@@ -1,0 +1,21 @@
+# Virtual environment
+venv/
+
+# Environment variables (contains API credentials)
+.env
+
+# Test results
+xt_api_test_results.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
