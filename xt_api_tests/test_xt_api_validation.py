@@ -140,10 +140,19 @@ class XTAPITester:
                     formats_to_test = ["validate"]
                 
                 for auth_format in formats_to_test:
+                    # XT signature: Y = #method#path#query#body
+                    # GET/DELETE with params: query string (sorted). POST: body (JSON).
+                    method_upper = method.upper()
+                    if method_upper in ("GET", "DELETE") and params:
+                        signature_payload = urlencode(sorted(params.items()))
+                    elif data:
+                        signature_payload = json.dumps(data)
+                    else:
+                        signature_payload = ""
                     headers, signature = (
-                        self._generate_signature_v1(method, path, json.dumps(data) if data else "")
+                        self._generate_signature_v1(method_upper, path, signature_payload)
                         if auth_format == "validate"
-                        else self._generate_signature_v2(method, path, json.dumps(data) if data else "")
+                        else self._generate_signature_v2(method_upper, path, signature_payload)
                     )
                     
                     async with aiohttp.ClientSession() as session:
@@ -349,7 +358,7 @@ class XTAPITester:
         await self.test_endpoint(
             name="5. Recent Trades",
             method="GET",
-            path="/v4/public/trades",
+            path="/v4/public/trade",
             params={"symbol": "btc_usdt", "limit": 10}
         )
         
@@ -408,13 +417,14 @@ class XTAPITester:
         
         await self.test_websocket_public()
         
-        # Test private WebSocket if we got a listen key
+        # Test private WebSocket if we got a listen key (XT may return listenKey or accessToken)
         if ws_token_result["passed"] and ws_token_result["response"].get("result"):
-            listen_key = ws_token_result["response"]["result"].get("listenKey")
+            result_data = ws_token_result["response"].get("result") or {}
+            listen_key = result_data.get("listenKey") or result_data.get("accessToken")
             if listen_key:
                 await self.test_websocket_private(listen_key)
             else:
-                print("⚠️  Skipping private WebSocket (no listenKey in response)")
+                print("⚠️  Skipping private WebSocket (no listenKey or accessToken in response)")
         
         # Phase 5: Summary
         print("\n" + "="*80)
