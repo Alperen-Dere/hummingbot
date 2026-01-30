@@ -415,13 +415,30 @@ class XTAPITester:
             requires_auth=True
         )
         
-        await self.test_endpoint(
+        open_orders_result = await self.test_endpoint(
             name="8. Open Orders",
             method="GET",
             path="/v4/open-order",
             params={"bizType": "SPOT"},
             requires_auth=True
         )
+        if open_orders_result["passed"] and open_orders_result.get("response"):
+            orders = open_orders_result["response"].get("result")
+            if isinstance(orders, list):
+                print(f"   📋 Open orders: {len(orders)}")
+                for i, o in enumerate(orders):
+                    order_id = o.get("orderId") or o.get("i")
+                    client_id = o.get("clientOrderId") or o.get("ci")
+                    symbol = o.get("symbol", "")
+                    side = o.get("side", "")
+                    price = o.get("price") or o.get("p", "")
+                    qty = o.get("origQty") or o.get("quantity") or o.get("q", "")
+                    state = o.get("state") or o.get("st", "")
+                    print(f"      {i + 1}. {symbol} {side} qty={qty} price={price} (orderId={order_id}, clientOrderId={client_id}, state={state})")
+            elif orders is not None:
+                print(f"   📋 Open orders: {orders}")
+            else:
+                print(f"   📋 Open orders: 0 (no open orders)")
         
         # GET /v4/order: query by orderId (no real order created; expect "order not found")
         await self.test_endpoint(
